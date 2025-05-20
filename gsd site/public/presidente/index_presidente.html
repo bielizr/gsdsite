@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="pt-br" >
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Painel do Presidente - Grêmio GSD</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="presidente.css" rel="stylesheet" />
+</head>
+<body class="bg-gray-100 font-sans">
+
+<div class="flex min-h-screen">
+
+  <!-- Sidebar -->
+  <aside class="w-64 bg-blue-800 text-white p-6 flex flex-col">
+    <h1 class="text-3xl font-bold mb-10">Painel Presidente</h1>
+    <nav class="flex flex-col space-y-4 text-lg">
+      <button data-tab="presenca" class="tab-btn bg-blue-700 px-4 py-2 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-white">Controle de Presença</button>
+      <button data-tab="comissoes" class="tab-btn px-4 py-2 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-white">Gestão de Comissões</button>
+      <button data-tab="enquetes" class="tab-btn px-4 py-2 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-white">Enquetes e Votações</button>
+    </nav>
+  </aside>
+
+  <!-- Conteúdo Principal -->
+  <main class="flex-1 p-8 overflow-y-auto">
+
+    <!-- PRESENÇA -->
+    <section id="presenca" class="tab-content">
+      <h2 class="text-2xl font-bold mb-6">Controle de Presença em Reuniões</h2>
+      <label class="block mb-3">
+        Data da reunião:
+        <input type="date" id="presenca-data" class="mt-1 p-2 border rounded" />
+      </label>
+      <button id="btn-carregar-presenca" class="bg-blue-700 hover:bg-blue-600 text-white px-6 py-2 rounded mb-6">Carregar Lista de Presença</button>
+
+      <form id="form-presenca" class="space-y-2 max-w-lg">
+        <!-- Lista de usuários será inserida aqui -->
+      </form>
+      <button id="btn-salvar-presenca" class="bg-green-600 hover:bg-green-500 text-white px-6 py-2 rounded mt-4">Salvar Presença</button>
+      <p id="presenca-msg" class="mt-4 text-green-700 font-semibold"></p>
+    </section>
+
+    <!-- COMISSÕES -->
+    <section id="comissoes" class="tab-content hidden">
+      <h2 class="text-2xl font-bold mb-6">Gestão de Comissões</h2>
+      <form id="form-criar-comissao" class="mb-8 max-w-lg space-y-4 bg-white p-6 rounded shadow">
+        <div>
+          <label class="block mb-1 font-semibold">Nome da Comissão:</label>
+          <input type="text" id="comissao-nome" class="w-full p-2 border rounded" required />
+        </div>
+        <div>
+          <label class="block mb-1 font-semibold">Tipo:</label>
+          <select id="comissao-tipo" class="w-full p-2 border rounded" required>
+            <option value="">Selecione</option>
+            <option value="fixa">Fixa</option>
+            <option value="temporaria">Temporária</option>
+          </select>
+        </div>
+        <div>
+          <label class="block mb-1 font-semibold">Responsável:</label>
+          <select id="comissao-responsavel" class="w-full p-2 border rounded" required>
+            <!-- Usuários serão carregados aqui -->
+          </select>
+        </div>
+        <div>
+          <label class="block mb-1 font-semibold">Membros:</label>
+          <div id="comissao-membros" class="mb-4">
+            <!-- O select múltiplo será inserido dinamicamente aqui -->
+          </div>
+        </div>        
+        <button type="submit" class="bg-green-600 hover:bg-green-500 text-white px-6 py-2 rounded">Criar Comissão</button>
+      </form>
+      <div id="lista-comissoes" class="space-y-4 max-w-3xl">
+        <!-- Comissões criadas -->
+      </div>
+    </section>
+
+    <!-- ENQUETES -->
+    <section id="enquetes" class="tab-content hidden">
+      <h2 class="text-2xl font-bold mb-6">Enquetes e Votações</h2>
+      <form id="form-criar-enquete" class="mb-8 max-w-lg space-y-4 bg-white p-6 rounded shadow">
+        <div>
+          <label class="block mb-1 font-semibold">Título da Enquete:</label>
+          <input type="text" id="enquete-titulo" class="w-full p-2 border rounded" required />
+        </div>
+        <div>
+          <label class="block mb-1 font-semibold">Opções (separadas por vírgula):</label>
+          <input type="text" id="enquete-opcoes" placeholder="Ex: Sim, Não, Talvez" class="w-full p-2 border rounded" required />
+        </div>
+        <button type="submit" class="bg-yellow-500 hover:bg-yellow-400 text-white px-6 py-2 rounded">Criar Enquete</button>
+      </form>
+
+      <div id="lista-enquetes" class="max-w-3xl space-y-6">
+        <!-- Enquetes existentes -->
+      </div>
+    </section>
+
+  </main>
+
+</div>
+
+<script src="presidente.js"></script>
+</body>
+</html>
