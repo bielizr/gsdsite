@@ -1,4 +1,67 @@
-// presidente.js
+document.addEventListener('DOMContentLoaded', () => {
+  // Seletores
+  const formAdicionarEvento = document.getElementById('form-adicionar-evento');
+  const calendarioVisualizacao = document.getElementById('calendario-visualizacao');
+  
+  let eventos = []; // Para armazenar os eventos
+
+  // Função para adicionar evento
+  formAdicionarEvento.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const titulo = document.getElementById('evento-titulo').value.trim();
+    const data = document.getElementById('evento-data').value.trim();
+    
+    if (!titulo || !data) {
+      alert('Preencha todos os campos!');
+      return;
+    }
+    
+    // Salvar evento no banco (para o backend)
+    const res = await fetch('http://localhost:3000/calendario', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ titulo, data })
+    });
+    
+    if (res.ok) {
+      alert('Evento adicionado com sucesso!');
+      carregarEventos(); // Recarregar a lista de eventos
+      formAdicionarEvento.reset();
+    } else {
+      alert('Erro ao adicionar evento.');
+    }
+  });
+
+  // Função para carregar os eventos
+  async function carregarEventos() {
+    const res = await fetch('http://localhost:3000/calendario');
+    eventos = await res.json();
+
+    calendarioVisualizacao.innerHTML = ''; // Limpar a lista antes de renderizar
+
+    if (eventos.length === 0) {
+      calendarioVisualizacao.innerHTML = '<p class="text-gray-600">Nenhum evento registrado.</p>';
+      return;
+    }
+
+    eventos.forEach(evento => {
+      const div = document.createElement('div');
+      div.className = 'bg-white p-4 rounded shadow';
+
+      div.innerHTML = `
+        <h3 class="font-bold text-lg">${evento.titulo}</h3>
+        <p><strong>Data:</strong> ${evento.data}</p>
+      `;
+      
+      calendarioVisualizacao.appendChild(div);
+    });
+  }
+
+  // Inicializa o calendário com os eventos
+  carregarEventos();
+});
+
 document.addEventListener('DOMContentLoaded', () => {
   // Tabs
   const tabs = document.querySelectorAll('.tab-btn');
@@ -9,7 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
     contents.forEach(c => c.id === name ? c.classList.remove('hidden') : c.classList.add('hidden'));
   }
 
-  switchTab('presenca');
+  switchTab('calendario'); // Inicia com a aba "calendario" aberta
 
   tabs.forEach(tab => {
     tab.addEventListener('click', () => {
@@ -17,40 +80,164 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // ------- PRESENÇA -------
+  // ------- RELATÓRIOS -------
 
-  const dataInput = document.getElementById('presenca-data');
-  const btnCarregarPresenca = document.getElementById('btn-carregar-presenca');
+  const listaRelatorios = document.getElementById('lista-relatorios');
+
+  async function carregarRelatorios() {
+    const res = await fetch('http://localhost:3000/relatorios'); // Busca os relatórios do backend
+    const relatorios = await res.json();
+
+    listaRelatorios.innerHTML = '';
+    if (relatorios.length === 0) {
+      listaRelatorios.innerHTML = '<p class="text-gray-600">Nenhum relatório pendente.</p>';
+      return;
+    }
+
+    relatorios.forEach(r => {
+      const div = document.createElement('div');
+      div.className = 'bg-white p-4 rounded shadow';
+
+      div.innerHTML = `
+        <h3 class="font-bold text-lg">${r.titulo}</h3>
+        <p><strong>Enviado por:</strong> ${r.usuario_nome}</p>
+        <p><strong>Status:</strong> ${r.status}</p>
+        <p><strong>Observações:</strong> ${r.observacoes || 'Nenhuma'}</p>
+        <button class="bg-blue-500 text-white px-4 py-2 rounded mt-4" onclick="aprovarRelatorio(${r.id})">Aprovar</button>
+        <button class="bg-red-500 text-white px-4 py-2 rounded mt-4" onclick="recusarRelatorio(${r.id})">Recusar</button>
+      `;
+
+      listaRelatorios.appendChild(div);
+    });
+  }
+
+  // Aprovar relatório
+  async function aprovarRelatorio(id) {
+    const res = await fetch(`http://localhost:3000/relatorios/${id}/aprovar`, { method: 'PATCH' });
+    if (res.ok) {
+      alert('Relatório aprovado!');
+      carregarRelatorios(); // Recarregar os relatórios
+    } else {
+      alert('Erro ao aprovar o relatório.');
+    }
+  }
+
+  // Recusar relatório
+  async function recusarRelatorio(id) {
+    const res = await fetch(`http://localhost:3000/relatorios/${id}/recusar`, { method: 'PATCH' });
+    if (res.ok) {
+      alert('Relatório recusado!');
+      carregarRelatorios(); // Recarregar os relatórios
+    } else {
+      alert('Erro ao recusar o relatório.');
+    }
+  }
+
+  carregarRelatorios(); // Carregar os relatórios ao carregar a página
+});
+
+// ------ UPLOAD DE ARQUIVOS ------
+
+// Seletores
+const formUploadArquivo = document.getElementById('form-upload-arquivo');
+const listaArquivos = document.getElementById('lista-arquivos');
+
+// Evento de envio do formulário para upload de arquivos
+formUploadArquivo.addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const tipo = document.getElementById('tipo').value.trim();
+  const arquivoInput = document.getElementById('arquivo');
+  const arquivo = arquivoInput.files[0];
+
+  if (!tipo || !arquivo) {
+    alert('Por favor, preencha o nome e selecione um arquivo.');
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append('nome', tipo); // Tipo do arquivo, como 'Ata', 'Apresentação', etc.
+  formData.append('arquivo', arquivo); // O arquivo a ser enviado
+
+  try {
+    const response = await fetch('http://localhost:3000/arquivos', {
+      method: 'POST',
+      body: formData
+    });
+
+    if (!response.ok) {
+      alert('Erro ao enviar arquivo.');
+      return;
+    }
+
+    alert('Arquivo enviado com sucesso!');
+    carregarArquivos(); // Carregar arquivos após o upload
+  } catch (err) {
+    console.error(err);
+    alert('Erro ao conectar ao servidor.');
+  }
+});
+
+// Carregar arquivos
+async function carregarArquivos() {
+  const res = await fetch('http://localhost:3000/arquivos');
+  const arquivos = await res.json();
+
+  listaArquivos.innerHTML = ''; // Limpar a lista antes de renderizar
+
+  if (arquivos.length === 0) {
+    listaArquivos.innerHTML = '<p class="text-gray-600">Nenhum arquivo enviado.</p>';
+    return;
+  }
+
+  arquivos.forEach(arquivo => {
+    const div = document.createElement('div');
+    div.className = 'bg-white p-4 rounded shadow';
+
+    div.innerHTML = `
+      <h3 class="font-bold text-lg">${arquivo.nome}</h3>
+      <p><strong>Tipo:</strong> ${arquivo.tipo}</p>
+      <p><strong>Data de Upload:</strong> ${arquivo.data_upload}</p>
+      <a href="${arquivo.caminho}" target="_blank" class="text-blue-600 hover:underline">Baixar</a>
+    `;
+
+    listaArquivos.appendChild(div);
+  });
+}
+
+// Carregar arquivos ao iniciar
+carregarArquivos();
+
+document.addEventListener('DOMContentLoaded', () => {
   const formPresenca = document.getElementById('form-presenca');
   const btnSalvarPresenca = document.getElementById('btn-salvar-presenca');
   const presencaMsg = document.getElementById('presenca-msg');
-
+  const dataReuniaoInput = document.getElementById('data-reuniao');
+  
   let usuarios = [];
 
-  // Buscar usuários para lista
+  // Função para carregar os usuários
   async function carregarUsuarios() {
     const res = await fetch('http://localhost:3000/users');
     usuarios = await res.json();
+    renderizarUsuarios();
   }
 
-  // Montar lista de presença com checkboxes
-  function montarListaPresenca(presencasDoDia = []) {
-    formPresenca.innerHTML = '';
+  // Função para renderizar a lista de presença
+  function renderizarUsuarios() {
+    formPresenca.innerHTML = ''; // Limpa a lista antes de renderizar novamente
     usuarios.forEach(u => {
-      const presenca = presencasDoDia.find(p => p.user_id === u.id);
-      const status = presenca ? presenca.status : 'ausente';
-
       const div = document.createElement('div');
       div.className = 'flex items-center space-x-4 bg-white p-2 rounded shadow';
 
       div.innerHTML = `
         <span class="flex-1">${u.name} (${u.sector})</span>
         <label class="flex items-center space-x-2">
-          <input type="radio" name="presenca-${u.id}" value="presente" ${status==='presente'?'checked':''} />
+          <input type="radio" name="presenca-${u.id}" value="presente" />
           <span>Presente</span>
         </label>
         <label class="flex items-center space-x-2">
-          <input type="radio" name="presenca-${u.id}" value="ausente" ${status==='ausente'?'checked':''} />
+          <input type="radio" name="presenca-${u.id}" value="ausente" />
           <span>Ausente</span>
         </label>
       `;
@@ -58,28 +245,18 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Carregar presenças do dia
-  btnCarregarPresenca.addEventListener('click', async () => {
-    if (!dataInput.value) {
-      alert('Selecione uma data');
-      return;
-    }
-    const res = await fetch(`http://localhost:3000/presencas/${dataInput.value}`);
-    const presencas = await res.json();
-    montarListaPresenca(presencas);
-    presencaMsg.textContent = '';
-  });
-
-  // Salvar presenças
+  // Função para salvar a presença
   btnSalvarPresenca.addEventListener('click', async () => {
-    if (!dataInput.value) {
+    const dataReuniao = dataReuniaoInput.value.trim();
+    if (!dataReuniao) {
       alert('Selecione uma data');
       return;
     }
 
+    // Coleta as presenças
     const presencas = usuarios.map(u => {
       const radios = document.getElementsByName(`presenca-${u.id}`);
-      let status = 'ausente';
+      let status = 'ausente';  // Se não for selecionado, assume como ausente
       for (const r of radios) {
         if (r.checked) {
           status = r.value;
@@ -89,213 +266,23 @@ document.addEventListener('DOMContentLoaded', () => {
       return { user_id: u.id, status };
     });
 
+    // Envia para o backend
     const res = await fetch('http://localhost:3000/presencas', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ date: dataInput.value, presencas })
+      body: JSON.stringify({ date: dataReuniao, presencas })  // Enviando a data corretamente
     });
 
     if (res.ok) {
       presencaMsg.textContent = 'Presenças salvas com sucesso!';
+      formPresenca.innerHTML = '';  // Limpa após salvar
     } else {
       presencaMsg.textContent = 'Erro ao salvar presença.';
     }
   });
 
-  // Inicializa usuários ao carregar a página
+  // Inicializa o carregamento dos usuários
   carregarUsuarios();
-
- // ------- COMISSÕES -------
-
-const formCriarComissao = document.getElementById('form-criar-comissao');
-const selectResponsavel = document.getElementById('comissao-responsavel');
-const divMembros = document.getElementById('comissao-membros');
-const listaComissoes = document.getElementById('lista-comissoes');
-
-// Montar selects para responsáveis e membros (membros como multi-select)
-function montarSelectsUsuarios() {
-  // Limpar selects
-  selectResponsavel.innerHTML = '<option value="">Selecione</option>';
-  divMembros.innerHTML = '';
-
-  usuarios.forEach(u => {
-    // Responsável - select simples
-    const option = document.createElement('option');
-    option.value = u.id;
-    option.textContent = `${u.name} (${u.sector})`;
-    selectResponsavel.appendChild(option);
-  });
-
-  // Membros - select múltiplo
-  const selectMembros = document.createElement('select');
-  selectMembros.id = 'comissao-membros-multi';
-  selectMembros.multiple = true;
-  selectMembros.className = 'w-full p-2 border rounded h-48';
-
-  usuarios.forEach(u => {
-    const option = document.createElement('option');
-    option.value = u.id;
-    option.textContent = `${u.name} (${u.sector})`;
-    selectMembros.appendChild(option);
-  });
-
-  divMembros.appendChild(selectMembros);
-}
-
-// Criar comissão via API
-formCriarComissao.addEventListener('submit', async e => {
-  e.preventDefault();
-  const nome = document.getElementById('comissao-nome').value.trim();
-  const tipo = document.getElementById('comissao-tipo').value;
-  const responsavel_id = selectResponsavel.value;
-  const selectMembros = document.getElementById('comissao-membros-multi');
-  const membros = Array.from(selectMembros.selectedOptions).map(opt => parseInt(opt.value));
-
-  if (!nome || !tipo || !responsavel_id) {
-    alert('Preencha todos os campos obrigatórios.');
-    return;
-  }
-
-  const res = await fetch('http://localhost:3000/comissoes', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ nome, tipo, responsavel_id: parseInt(responsavel_id), membros })
-  });
-
-  if (res.ok) {
-    alert('Comissão criada com sucesso!');
-    formCriarComissao.reset();
-    carregarComissoes();
-  } else {
-    alert('Erro ao criar comissão.');
-  }
 });
 
-// Carregar e mostrar comissões
-async function carregarComissoes() {
-  const res = await fetch('http://localhost:3000/comissoes');
-  const comissoes = await res.json();
 
-  listaComissoes.innerHTML = '';
-  if (comissoes.length === 0) {
-    listaComissoes.innerHTML = '<p class="text-gray-600">Nenhuma comissão criada.</p>';
-    return;
-  }
-
-  comissoes.forEach(c => {
-    const div = document.createElement('div');
-    div.className = 'bg-white p-4 rounded shadow';
-
-    div.innerHTML = `
-      <h3 class="font-bold text-lg">${c.nome} <span class="text-sm text-gray-500">(${c.tipo})</span></h3>
-      <p><strong>Responsável:</strong> ${c.responsavel_nome || 'Não definido'}</p>
-      <p><strong>Membros:</strong> ${c.membros.map(m => m.name).join(', ') || 'Nenhum'}</p>
-    `;
-
-    listaComissoes.appendChild(div);
-  });
-}
-
-// Inicializar selects e lista comissões
-montarSelectsUsuarios();
-carregarComissoes();
-
-  // ------- ENQUETES -------
-
-  const formCriarEnquete = document.getElementById('form-criar-enquete');
-  const listaEnquetes = document.getElementById('lista-enquetes');
-
-  formCriarEnquete.addEventListener('submit', async e => {
-    e.preventDefault();
-    const titulo = document.getElementById('enquete-titulo').value.trim();
-    const opcoesRaw = document.getElementById('enquete-opcoes').value.trim();
-    if (!titulo || !opcoesRaw) {
-      alert('Preencha título e opções.');
-      return;
-    }
-
-    const opcoes = opcoesRaw.split(',').map(o => o.trim()).filter(o => o);
-
-    const res = await fetch('http://localhost:3000/enquetes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ titulo, opcoes })
-    });
-
-    if (res.ok) {
-      alert('Enquete criada!');
-      formCriarEnquete.reset();
-      carregarEnquetes();
-    } else {
-      alert('Erro ao criar enquete.');
-    }
-  });
-
-  // Mostrar enquetes
-  async function carregarEnquetes() {
-    const res = await fetch('http://localhost:3000/enquetes');
-    const enquetes = await res.json();
-
-    listaEnquetes.innerHTML = '';
-    if (enquetes.length === 0) {
-      listaEnquetes.innerHTML = '<p class="text-gray-600">Nenhuma enquete criada.</p>';
-      return;
-    }
-
-    enquetes.forEach(enquete => {
-      const div = document.createElement('div');
-      div.className = 'bg-white p-4 rounded shadow';
-
-      let opcoesHtml = '';
-      enquete.opcoes.forEach(opcao => {
-        opcoesHtml += `
-          <label class="flex items-center space-x-2 mb-1 cursor-pointer">
-            <input type="radio" name="enquete-${enquete.id}" value="${opcao.id}" />
-            <span>${opcao.texto} (${opcao.votos} votos)</span>
-          </label>`;
-      });
-
-      div.innerHTML = `
-        <h3 class="font-bold text-lg mb-2">${enquete.titulo}</h3>
-        <form data-enquete-id="${enquete.id}" class="form-votar-enquete">
-          ${opcoesHtml}
-          <button type="submit" class="bg-yellow-500 hover:bg-yellow-400 text-white px-4 py-1 rounded mt-2">Votar</button>
-        </form>
-      `;
-
-      listaEnquetes.appendChild(div);
-    });
-
-    // Adicionar listeners para votação
-    document.querySelectorAll('.form-votar-enquete').forEach(form => {
-      form.addEventListener('submit', async e => {
-        e.preventDefault();
-        const enqueteId = parseInt(form.dataset.enqueteId);
-        const opcaoId = form.querySelector('input[type="radio"]:checked')?.value;
-        if (!opcaoId) {
-          alert('Selecione uma opção para votar.');
-          return;
-        }
-
-        // Aqui você deve passar o user_id do usuário logado, vamos usar 1 para teste
-        const user_id = 1;
-
-        const res = await fetch('http://localhost:3000/enquetes/votar', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ enquete_id: enqueteId, opcao_id: parseInt(opcaoId), user_id })
-        });
-
-        if (res.ok) {
-          alert('Voto registrado!');
-          carregarEnquetes();
-        } else {
-          const json = await res.json();
-          alert(json.error || 'Erro ao registrar voto.');
-        }
-      });
-    });
-  }
-
-  carregarEnquetes();
-});
